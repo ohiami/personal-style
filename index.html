@@ -519,6 +519,28 @@
       opacity: 1;
     }
 
+    .option-card.unavailable {
+      opacity: .46;
+      background: rgba(255, 255, 255, .55);
+      border-color: rgba(229, 231, 235, .88);
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .option-card.unavailable::before {
+      opacity: 0;
+    }
+
+    .option-card.unavailable:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .option-card.unavailable .check-dot {
+      display: none;
+    }
+
     .option-icon {
       width: 46px;
       height: 46px;
@@ -538,10 +560,15 @@
     .option-text {
       position: relative;
       z-index: 1;
-      font-size: clamp(15px, 2.6vw, 18px);
-      line-height: 1.52;
+      width: 100%;
+      max-width: 100%;
+      font-size: clamp(14px, 2.45vw, 18px);
+      line-height: 1.42;
       font-weight: 800;
-      word-break: keep-all;
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: anywhere;
+      line-break: auto;
     }
 
     .check-dot {
@@ -939,6 +966,12 @@
       .option-icon {
         width: 40px;
         height: 40px;
+      }
+
+      .option-text {
+        font-size: 14px;
+        line-height: 1.38;
+        letter-spacing: -.02em;
       }
 
       .score-row {
@@ -1363,13 +1396,16 @@
         : "下一步 →";
       el.backBtn.disabled = state.phaseIndex === 0;
 
-      el.optionsGrid.innerHTML = eligible.map((optionIndex, displayIndex) => {
-        const selectedClass = selected.includes(optionIndex) ? "selected" : "";
-        const tone = displayIndex % 2 === 0 ? "sage" : "blue";
-        const text = round.options[optionIndex];
+      const eligibleSet = new Set(eligible);
+      el.optionsGrid.innerHTML = round.options.map((text, optionIndex) => {
+        const isSelected = selected.includes(optionIndex);
+        const isEligible = eligibleSet.has(optionIndex);
+        const selectedClass = isSelected ? "selected" : "";
+        const unavailableClass = isEligible ? "" : "unavailable";
+        const tone = optionIndex % 2 === 0 ? "sage" : "blue";
         const iconName = optionIconNames[optionIndex] || "flag";
         return `
-          <button type="button" class="option-card ${tone} ${selectedClass}" data-index="${optionIndex}" aria-pressed="${selected.includes(optionIndex)}">
+          <button type="button" class="option-card ${tone} ${selectedClass} ${unavailableClass}" data-index="${optionIndex}" aria-pressed="${isSelected}" aria-disabled="${!isEligible}">
             <span class="check-dot" aria-hidden="true">✓</span>
             <span class="option-icon" aria-hidden="true">${icons[iconName]}</span>
             <span class="option-text">${escapeHtml(text)}</span>
@@ -1378,7 +1414,14 @@
       }).join("");
 
       el.optionsGrid.querySelectorAll(".option-card").forEach(card => {
-        card.addEventListener("click", () => toggleOption(Number(card.dataset.index)));
+        card.addEventListener("click", () => {
+          const optionIndex = Number(card.dataset.index);
+          if (!eligibleSet.has(optionIndex)) {
+            showMessage("這一步請從上一輪選過的選項中再選，其他選項會保留原位但不能點選。");
+            return;
+          }
+          toggleOption(optionIndex);
+        });
       });
     }
 
